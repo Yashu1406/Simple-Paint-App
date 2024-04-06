@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Paint App</title>
+<style>
+    #canvas {
+        border: 1px solid black;
+        cursor: crosshair;
+    }
+</style>
+</head>
+<body>
+<h1>SIMPLE PAINT APP</H1>
+<canvas id="canvas" width="800" height="500"></canvas>
+<label for="colorPicker">Color:</label>
+<input type="color" id="colorPicker">
+<label for="sizeRange">Size:</label>
+<input type="range" id="sizeRange" min="1" max="100" value="10">
+<button id="resetBtn">Reset</button>
+<button id="undoBtn">Undo</button>
+<button id="saveBtn">Save</button>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const resetBtn = document.getElementById('resetBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const colorPicker = document.getElementById('colorPicker');
+    const sizeRange = document.getElementById('sizeRange');
+    let circles = [];
+    let undoStack = [];
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('click', checkHit);
+    canvas.addEventListener('dblclick', deleteCircle);
+    resetBtn.addEventListener('click', resetCanvas);
+    undoBtn.addEventListener('click', undoDrawing);
+    saveBtn.addEventListener('click', saveDrawing);
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+        undoStack.push(circles.slice());
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        const x = e.offsetX;
+        const y = e.offsetY;
+        const size = sizeRange.value;
+        const color = colorPicker.value;
+        drawCircle(x, y, size, color);
+        [lastX, lastY] = [x, y];
+    }
+
+    function drawCircle(x, y, size, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        circles.push({ x, y, size, color });
+    }
+
+    function resetCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        circles = [];
+        undoStack = [];
+    }
+
+    function undoDrawing() {
+        if (undoStack.length > 0) {
+            circles = undoStack.pop();
+            redrawCanvas();
+        }
+    }
+
+    function checkHit(e) {
+        const x = e.offsetX;
+        const y = e.offsetY;
+        let hit = false;
+        circles.forEach(circle => {
+            if (Math.sqrt((x - circle.x) ** 2 + (y - circle.y) ** 2) <= circle.size / 2) {
+                hit = true;
+            }
+        });
+        if (hit) {
+            console.log('Hit');
+        } else {
+            console.log('Miss');
+        }
+    }
+
+    function deleteCircle(e) {
+        const x = e.offsetX;
+        const y = e.offsetY;
+        circles = circles.filter(circle => {
+            return Math.sqrt((x - circle.x) ** 2 + (y - circle.y) ** 2) > circle.size / 2;
+        });
+        undoStack.push(circles.slice());
+        redrawCanvas();
+    }
+
+    function redrawCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        circles.forEach(circle => {
+            drawCircle(circle.x, circle.y, circle.size, circle.color);
+        });
+    }
+
+    function saveDrawing() {
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'drawing.png';
+        link.click();
+    }
+</script>
+</body>
+</html>
